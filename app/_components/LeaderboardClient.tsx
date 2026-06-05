@@ -178,10 +178,13 @@ export default function LeaderboardClient({ slug }: { slug: string }) {
           </h1>
           <p className="mt-4 max-w-3xl text-lg font-semibold leading-7 text-white/80 sm:text-2xl">
             {currentEvent?.event_name ?? "No Active Event Selected"}
+            {currentEvent?.event_subtitle ? (
+              <span className="block text-base text-white/70 sm:text-xl">
+                {currentEvent.event_subtitle}
+              </span>
+            ) : null}
             <span className="block text-white/60">
-              {currentEvent?.venue_name ||
-                currentEvent?.event_subtitle ||
-                "Select an event in admin"}
+              {currentEvent?.venue_name || "Select an event in admin"}
             </span>
           </p>
         </header>
