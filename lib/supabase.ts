@@ -17,6 +17,7 @@ export type LeaderboardEntry = {
 export type LeaderboardEvent = {
   id: string;
   event_name: string;
+  slug: string;
   event_subtitle: string | null;
   venue_name: string | null;
   logo_url: string | null;
@@ -27,6 +28,7 @@ export type LeaderboardEvent = {
 export type AppSettings = {
   id: number;
   current_event_id: string | null;
+  company_logo_url: string | null;
   updated_at: string | null;
 };
 

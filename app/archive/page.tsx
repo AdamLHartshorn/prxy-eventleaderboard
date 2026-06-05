@@ -129,14 +129,6 @@ export default function ArchivePage() {
               <section key={archive.id}>
                 <div className="mb-4 flex flex-wrap items-end justify-between gap-3 border-b border-[#E53935] pb-3">
                   <div>
-                    {archive.logo_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        alt={`${archive.event_name} logo`}
-                        className="mb-3 max-h-16 max-w-40 object-contain"
-                        src={archive.logo_url}
-                      />
-                    ) : null}
                     <h2 className="text-3xl font-black uppercase leading-tight">
                       {archive.event_name}
                     </h2>

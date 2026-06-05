@@ -31,9 +31,9 @@ type DraftEntry = {
 
 type EventDraft = {
   event_name: string;
+  slug: string;
   event_subtitle: string;
   venue_name: string;
-  logo_url: string;
 };
 
 const emptyDraft: DraftEntry = {
@@ -46,10 +46,18 @@ const emptyDraft: DraftEntry = {
 
 const emptyEventDraft: EventDraft = {
   event_name: "",
+  slug: "",
   event_subtitle: "Indiana Sports Corp Charity Golf Tournament",
   venue_name: "The Sagamore Club of Noblesville",
-  logo_url: "",
 };
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
 function sortEntries(entries: LeaderboardEntry[]) {
   return [...entries].sort((a, b) => {
@@ -88,9 +96,9 @@ function draftToPayload(draft: DraftEntry) {
 function eventDraftToPayload(draft: EventDraft) {
   return {
     event_name: draft.event_name.trim(),
+    slug: draft.slug.trim() || slugify(draft.event_name),
     event_subtitle: draft.event_subtitle.trim() || null,
     venue_name: draft.venue_name.trim() || null,
-    logo_url: draft.logo_url.trim() || null,
     updated_at: new Date().toISOString(),
   };
 }
@@ -121,7 +129,7 @@ export default function AdminPage() {
   const [events, setEvents] = useState<LeaderboardEvent[]>([]);
   const [currentEventId, setCurrentEventId] = useState<string | null>(null);
   const [eventDraft, setEventDraft] = useState<EventDraft>(emptyEventDraft);
-  const [newEventLogoFile, setNewEventLogoFile] = useState<File | null>(null);
+  const [companyLogoUrl, setCompanyLogoUrl] = useState("");
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [drafts, setDrafts] = useState<Record<string, DraftEntry>>({});
   const [newEntry, setNewEntry] = useState<DraftEntry>(emptyDraft);
@@ -129,7 +137,8 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [savingEvent, setSavingEvent] = useState(false);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [savingCompanyLogo, setSavingCompanyLogo] = useState(false);
+  const [uploadingCompanyLogo, setUploadingCompanyLogo] = useState(false);
   const [uploadingPhotoId, setUploadingPhotoId] = useState<string | null>(null);
   const [archiving, setArchiving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -144,43 +153,6 @@ export default function AdminPage() {
     () => entries.filter((entry) => entry.is_active).length,
     [entries],
   );
-
-  async function uploadLogoFile(eventId: string, file: File) {
-    if (!supabase) {
-      return {
-        error: supabaseConfigError,
-        publicUrl: null,
-      };
-    }
-
-    const client = supabase;
-    const extension = file.name.split(".").pop() || "png";
-    const path = `event-logos/${eventId}/${crypto.randomUUID()}.${extension}`;
-    const { data: uploadResponse, error: uploadNetworkError } =
-      await runSupabaseAction(() =>
-        client.storage.from("shot-videos").upload(path, file, {
-          cacheControl: "3600",
-          contentType: file.type || undefined,
-          upsert: false,
-        }),
-      );
-
-    const uploadError = uploadNetworkError ?? uploadResponse?.error?.message;
-
-    if (uploadError) {
-      return {
-        error: uploadError,
-        publicUrl: null,
-      };
-    }
-
-    const { data } = client.storage.from("shot-videos").getPublicUrl(path);
-
-    return {
-      error: null,
-      publicUrl: data.publicUrl,
-    };
-  }
 
   async function uploadPlayerPhoto(entry: LeaderboardEntry, file: File | null) {
     if (!file) return;
@@ -239,6 +211,91 @@ export default function AdminPage() {
     await loadAdminState();
   }
 
+  async function uploadCompanyLogo(file: File | null) {
+    if (!file) return;
+
+    if (!supabase) {
+      setError(supabaseConfigError);
+      return;
+    }
+
+    const client = supabase;
+    setUploadingCompanyLogo(true);
+    setError(null);
+    setMessage(null);
+
+    const extension = file.name.split(".").pop() || "png";
+    const path = `company-logo/${crypto.randomUUID()}.${extension}`;
+    const { data: uploadResponse, error: uploadNetworkError } =
+      await runSupabaseAction(() =>
+        client.storage.from("shot-videos").upload(path, file, {
+          cacheControl: "3600",
+          contentType: file.type || undefined,
+          upsert: false,
+        }),
+      );
+
+    const uploadError = uploadNetworkError ?? uploadResponse?.error?.message;
+
+    if (uploadError) {
+      setUploadingCompanyLogo(false);
+      setError(uploadError);
+      return;
+    }
+
+    const { data } = client.storage.from("shot-videos").getPublicUrl(path);
+    setCompanyLogoUrl(data.publicUrl);
+
+    const { error: saveError } = await saveCompanyLogo(data.publicUrl);
+    setUploadingCompanyLogo(false);
+
+    if (saveError) {
+      setError(saveError);
+      return;
+    }
+
+    setMessage("Company logo uploaded.");
+  }
+
+  async function saveCompanyLogo(nextLogoUrl = companyLogoUrl) {
+    if (!supabase) {
+      return {
+        error: supabaseConfigError,
+      };
+    }
+
+    setSavingCompanyLogo(true);
+    setError(null);
+    setMessage(null);
+
+    const client = supabase;
+    const { error: saveError } = await runSupabaseAction(() =>
+      client
+        .from("app_settings")
+        .upsert({
+          id: 1,
+          company_logo_url: nextLogoUrl.trim() || null,
+          updated_at: new Date().toISOString(),
+        })
+        .throwOnError(),
+    );
+
+    setSavingCompanyLogo(false);
+
+    if (saveError) {
+      return {
+        error: saveError,
+      };
+    }
+
+    setMessage("Company logo saved.");
+    await loadAdminState();
+
+    return {
+      error: null,
+    };
+  }
+
   async function loadAdminState() {
     if (!supabase) {
       setError(supabaseConfigError);
@@ -282,6 +339,7 @@ export default function AdminPage() {
     }
 
     const settings = settingsResponse?.data as AppSettings | null;
+    setCompanyLogoUrl(settings?.company_logo_url ?? "");
     const selectedId = settings?.current_event_id ?? null;
     setCurrentEventId(selectedId);
 
@@ -441,6 +499,11 @@ export default function AdminPage() {
       return;
     }
 
+    if (!payload.slug) {
+      setError("Event slug is required.");
+      return;
+    }
+
     setSavingEvent(true);
     const client = supabase;
     const { data: response, error: createError } = await runSupabaseAction(() =>
@@ -460,65 +523,8 @@ export default function AdminPage() {
 
     const newEventId = response.data.id;
 
-    if (newEventLogoFile) {
-      const { error: uploadError, publicUrl } = await uploadLogoFile(
-        newEventId,
-        newEventLogoFile,
-      );
-
-      if (uploadError || !publicUrl) {
-        setSavingEvent(false);
-        await runSupabaseAction(() =>
-          client
-            .from("app_settings")
-            .upsert({
-              id: 1,
-              current_event_id: newEventId,
-              updated_at: new Date().toISOString(),
-            })
-            .throwOnError(),
-        );
-        setCurrentEventId(newEventId);
-        await loadAdminState();
-        setError(
-          `Event created, but logo upload failed: ${uploadError ?? "No public URL returned."}`,
-        );
-        return;
-      }
-
-      const { error: logoUpdateError } = await runSupabaseAction(() =>
-        client
-          .from("leaderboard_events")
-          .update({
-            logo_url: publicUrl,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", newEventId)
-          .throwOnError(),
-      );
-
-      if (logoUpdateError) {
-        setSavingEvent(false);
-        await runSupabaseAction(() =>
-          client
-            .from("app_settings")
-            .upsert({
-              id: 1,
-              current_event_id: newEventId,
-              updated_at: new Date().toISOString(),
-            })
-            .throwOnError(),
-        );
-        setCurrentEventId(newEventId);
-        await loadAdminState();
-        setError(`Event created, but logo save failed: ${logoUpdateError}`);
-        return;
-      }
-    }
-
     setSavingEvent(false);
     setEventDraft(emptyEventDraft);
-    setNewEventLogoFile(null);
     await selectCurrentEvent(newEventId);
     setMessage("Event created and selected.");
   }
@@ -531,6 +537,14 @@ export default function AdminPage() {
 
     setError(null);
     setMessage(null);
+
+    const normalizedSlug = slugify(currentEvent.slug);
+
+    if (!normalizedSlug) {
+      setError("Event slug is required.");
+      return;
+    }
+
     setSavingEvent(true);
 
     const client = supabase;
@@ -539,9 +553,9 @@ export default function AdminPage() {
         .from("leaderboard_events")
         .update({
           event_name: currentEvent.event_name,
+          slug: normalizedSlug,
           event_subtitle: currentEvent.event_subtitle,
           venue_name: currentEvent.venue_name,
-          logo_url: currentEvent.logo_url,
           updated_at: new Date().toISOString(),
         })
         .eq("id", currentEvent.id)
@@ -567,49 +581,6 @@ export default function AdminPage() {
         event.id === currentEvent.id ? { ...event, ...patch } : event,
       ),
     );
-  }
-
-  async function uploadEventLogo(file: File | null) {
-    if (!file || !supabase || !currentEvent) return;
-
-    const client = supabase;
-    setUploadingLogo(true);
-    setError(null);
-    setMessage(null);
-
-    const { error: uploadError, publicUrl } = await uploadLogoFile(
-      currentEvent.id,
-      file,
-    );
-
-    if (uploadError || !publicUrl) {
-      setUploadingLogo(false);
-      setError(uploadError ?? "No public logo URL returned.");
-      return;
-    }
-
-    patchCurrentEvent({ logo_url: publicUrl });
-
-    const { error: updateError } = await runSupabaseAction(() =>
-      client
-        .from("leaderboard_events")
-        .update({
-          logo_url: publicUrl,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", currentEvent.id)
-        .throwOnError(),
-    );
-
-    setUploadingLogo(false);
-
-    if (updateError) {
-      setError(updateError);
-      return;
-    }
-
-    setMessage("Event logo uploaded.");
-    await loadAdminState();
   }
 
   async function addPlayer(event: FormEvent<HTMLFormElement>) {
@@ -756,7 +727,6 @@ export default function AdminPage() {
             event_name: name,
             event_subtitle: currentEvent.event_subtitle,
             venue_name: currentEvent.venue_name,
-            logo_url: currentEvent.logo_url,
             finalized_at: new Date().toISOString(),
           })
           .select("id")
@@ -906,6 +876,64 @@ export default function AdminPage() {
 
         <section className="mb-5 border border-white/15 bg-[#080808] p-4">
           <div className="mb-3 text-sm font-black uppercase tracking-[0.14em] text-white/60">
+            Company Logo
+          </div>
+          <div className="mb-3 flex min-h-28 items-center justify-center border border-white/15 bg-black p-4">
+            {companyLogoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                alt="Company logo preview"
+                className="max-h-24 max-w-full object-contain"
+                src={companyLogoUrl}
+              />
+            ) : (
+              <span className="text-sm font-black uppercase tracking-[0.14em] text-white/35">
+                No company logo uploaded
+              </span>
+            )}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+            <input
+              className="h-13 border border-white/20 bg-black px-3 font-bold text-white outline-none focus:border-[#E53935]"
+              onChange={(event) => setCompanyLogoUrl(event.target.value)}
+              placeholder="Company logo URL"
+              value={companyLogoUrl}
+            />
+            <label className="flex h-13 cursor-pointer items-center justify-center gap-2 border border-white/20 bg-black px-4 font-black uppercase text-white/80">
+              {uploadingCompanyLogo ? (
+                <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload aria-hidden="true" className="h-4 w-4" />
+              )}
+              Upload Logo
+              <input
+                accept="image/*"
+                className="sr-only"
+                disabled={uploadingCompanyLogo}
+                onChange={(event) =>
+                  void uploadCompanyLogo(event.target.files?.[0] ?? null)
+                }
+                type="file"
+              />
+            </label>
+            <button
+              className="flex h-13 items-center justify-center gap-2 bg-[#E53935] px-5 font-black uppercase text-white disabled:opacity-50"
+              disabled={savingCompanyLogo || uploadingCompanyLogo}
+              onClick={() => void saveCompanyLogo()}
+              type="button"
+            >
+              {savingCompanyLogo ? (
+                <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save aria-hidden="true" className="h-4 w-4" />
+              )}
+              Save Logo
+            </button>
+          </div>
+        </section>
+
+        <section className="mb-5 border border-white/15 bg-[#080808] p-4">
+          <div className="mb-3 text-sm font-black uppercase tracking-[0.14em] text-white/60">
             Active Event
           </div>
           <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
@@ -934,26 +962,16 @@ export default function AdminPage() {
 
           {currentEvent ? (
             <div className="mt-4 grid gap-3">
-              <div className="flex min-h-24 items-center justify-center border border-white/15 bg-black p-4">
-                {currentEvent.logo_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    alt={`${currentEvent.event_name} logo preview`}
-                    className="max-h-20 max-w-full object-contain"
-                    src={currentEvent.logo_url}
-                  />
-                ) : (
-                  <span className="text-sm font-black uppercase tracking-[0.14em] text-white/35">
-                    No event logo uploaded
-                  </span>
-                )}
-              </div>
               <div className="grid gap-3 sm:grid-cols-3">
                 <input
                   className="h-13 border border-white/20 bg-black px-3 font-bold text-white outline-none focus:border-[#E53935]"
-                  onChange={(event) =>
-                    patchCurrentEvent({ event_name: event.target.value })
-                  }
+                  onChange={(event) => {
+                    const nextName = event.target.value;
+                    patchCurrentEvent({
+                      event_name: nextName,
+                      slug: currentEvent.slug || slugify(nextName),
+                    });
+                  }}
                   placeholder="Event name"
                   value={currentEvent.event_name}
                 />
@@ -974,35 +992,32 @@ export default function AdminPage() {
                   value={currentEvent.venue_name ?? ""}
                 />
               </div>
-              <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
-                <input
-                  className="h-13 border border-white/20 bg-black px-3 font-bold text-white outline-none focus:border-[#E53935]"
-                  onChange={(event) =>
-                    patchCurrentEvent({ logo_url: event.target.value })
-                  }
-                  placeholder="Event logo URL"
-                  value={currentEvent.logo_url ?? ""}
-                />
-                <label className="flex h-13 cursor-pointer items-center justify-center gap-2 border border-white/20 bg-black px-4 font-black uppercase text-white/80">
-                  {uploadingLogo ? (
-                    <Loader2
-                      aria-hidden="true"
-                      className="h-4 w-4 animate-spin"
-                    />
-                  ) : (
-                    <Upload aria-hidden="true" className="h-4 w-4" />
-                  )}
-                  Upload Logo File
+              <div className="grid gap-3 sm:grid-cols-[1fr_1fr]">
+                <label className="block">
+                  <span className="mb-1 block text-xs font-black uppercase tracking-[0.12em] text-white/45">
+                    Public URL Slug
+                  </span>
                   <input
-                    accept="image/*"
-                    className="sr-only"
-                    disabled={uploadingLogo}
+                    className="h-13 w-full border border-white/20 bg-black px-3 font-bold text-white outline-none focus:border-[#E53935]"
                     onChange={(event) =>
-                      void uploadEventLogo(event.target.files?.[0] ?? null)
+                      patchCurrentEvent({ slug: slugify(event.target.value) })
                     }
-                    type="file"
+                    placeholder="indianasportscorp"
+                    value={currentEvent.slug ?? ""}
                   />
                 </label>
+                <label className="block">
+                  <span className="mb-1 block text-xs font-black uppercase tracking-[0.12em] text-white/45">
+                    Public Leaderboard URL
+                  </span>
+                  <input
+                    className="h-13 w-full border border-white/20 bg-black px-3 font-bold text-white/60 outline-none"
+                    readOnly
+                    value={`/${currentEvent.slug || "event-slug"}`}
+                  />
+                </label>
+              </div>
+              <div className="grid gap-3">
                 <button
                   className="flex h-13 items-center justify-center gap-2 bg-[#E53935] px-5 font-black uppercase text-white disabled:opacity-50"
                   disabled={savingEvent}
@@ -1035,12 +1050,14 @@ export default function AdminPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <input
               className="h-13 border border-white/20 bg-black px-3 font-bold text-white outline-none focus:border-[#E53935]"
-              onChange={(event) =>
+              onChange={(event) => {
+                const nextName = event.target.value;
                 setEventDraft((current) => ({
                   ...current,
-                  event_name: event.target.value,
-                }))
-              }
+                  event_name: nextName,
+                  slug: current.slug || slugify(nextName),
+                }));
+              }}
               placeholder="Event name"
               value={eventDraft.event_name}
             />
@@ -1049,25 +1066,12 @@ export default function AdminPage() {
               onChange={(event) =>
                 setEventDraft((current) => ({
                   ...current,
-                  logo_url: event.target.value,
+                  slug: slugify(event.target.value),
                 }))
               }
-              placeholder="Logo URL"
-              value={eventDraft.logo_url}
+              placeholder="Public URL slug"
+              value={eventDraft.slug}
             />
-            <label className="flex h-13 cursor-pointer items-center justify-center gap-2 border border-white/20 bg-black px-4 font-black uppercase text-white/80">
-              <Upload aria-hidden="true" className="h-4 w-4" />
-              {newEventLogoFile ? newEventLogoFile.name : "Choose Logo File"}
-              <input
-                accept="image/*"
-                className="sr-only"
-                disabled={savingEvent}
-                onChange={(event) =>
-                  setNewEventLogoFile(event.target.files?.[0] ?? null)
-                }
-                type="file"
-              />
-            </label>
             <input
               className="h-13 border border-white/20 bg-black px-3 font-bold text-white outline-none focus:border-[#E53935]"
               onChange={(event) =>

@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { ImageIcon } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ImageIcon, X } from "lucide-react";
 import {
   getSupabaseErrorMessage,
   type AppSettings,
@@ -39,34 +38,38 @@ function PlaceholderImage() {
   );
 }
 
-function EventLogo({ event }: { event: LeaderboardEvent | null }) {
-  if (event?.logo_url) {
+function CompanyLogo({ logoUrl }: { logoUrl: string | null }) {
+  if (logoUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        alt={`${event.event_name} logo`}
-        className="max-h-20 max-w-44 object-contain"
-        src={event.logo_url}
+        alt="Company logo"
+        className="max-h-20 max-w-48 object-contain"
+        src={logoUrl}
       />
     );
   }
 
   return (
-    <div className="border border-white/30 px-4 py-2 text-right text-xs font-bold uppercase tracking-[0.16em] text-white/85">
-      Event Logo
+    <div className="border border-[#E53935]/70 px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-white">
+      PRXY Logo
     </div>
   );
 }
 
-export default function LeaderboardClient() {
+export default function LeaderboardClient({ slug }: { slug: string }) {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [currentEvent, setCurrentEvent] = useState<LeaderboardEvent | null>(
     null,
   );
+  const [selectedPhoto, setSelectedPhoto] = useState<LeaderboardEntry | null>(
+    null,
+  );
+  const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  async function loadBoard() {
+  const loadBoard = useCallback(async () => {
     if (!supabase) {
       setError(supabaseConfigError);
       setLoading(false);
@@ -74,16 +77,26 @@ export default function LeaderboardClient() {
     }
 
     try {
-      const { data: settingsRow } = await supabase
-        .from("app_settings")
-        .select("*")
-        .eq("id", 1)
-        .maybeSingle()
-        .throwOnError();
+      const [{ data: settingsRow }, { data: eventRow }] = await Promise.all([
+        supabase
+          .from("app_settings")
+          .select("*")
+          .eq("id", 1)
+          .maybeSingle()
+          .throwOnError(),
+        supabase
+          .from("leaderboard_events")
+          .select("*")
+          .eq("slug", slug)
+          .maybeSingle()
+          .throwOnError(),
+      ]);
 
       const settings = settingsRow as AppSettings | null;
+      const event = eventRow as LeaderboardEvent | null;
+      setCompanyLogoUrl(settings?.company_logo_url ?? null);
 
-      if (!settings?.current_event_id) {
+      if (!event) {
         setCurrentEvent(null);
         setEntries([]);
         setError(null);
@@ -91,22 +104,14 @@ export default function LeaderboardClient() {
         return;
       }
 
-      const [{ data: eventRow }, { data: entryRows }] = await Promise.all([
-        supabase
-          .from("leaderboard_events")
-          .select("*")
-          .eq("id", settings.current_event_id)
-          .single()
-          .throwOnError(),
-        supabase
-          .from("leaderboard_entries")
-          .select("*")
-          .eq("event_id", settings.current_event_id)
-          .eq("is_active", true)
-          .throwOnError(),
-      ]);
+      const { data: entryRows } = await supabase
+        .from("leaderboard_entries")
+        .select("*")
+        .eq("event_id", event.id)
+        .eq("is_active", true)
+        .throwOnError();
 
-      setCurrentEvent(eventRow as LeaderboardEvent);
+      setCurrentEvent(event);
       setEntries(sortEntries((entryRows ?? []) as LeaderboardEntry[]));
       setError(null);
       setLoading(false);
@@ -114,7 +119,7 @@ export default function LeaderboardClient() {
       setError(getSupabaseErrorMessage(networkError));
       setLoading(false);
     }
-  }
+  }, [slug]);
 
   useEffect(() => {
     const client = supabase;
@@ -157,7 +162,7 @@ export default function LeaderboardClient() {
     return () => {
       void client.removeChannel(channel);
     };
-  }, []);
+  }, [loadBoard]);
 
   const rankedEntries = useMemo(() => sortEntries(entries), [entries]);
 
@@ -166,16 +171,10 @@ export default function LeaderboardClient() {
       <section className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-6 sm:px-8 lg:px-10">
         <header className="mb-6 border-b border-white/15 pb-5">
           <div className="mb-5 flex items-center justify-between gap-3">
-            <div className="border border-[#E53935]/70 px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-white">
-              PRXY Logo
-            </div>
-            <EventLogo event={currentEvent} />
+            <CompanyLogo logoUrl={companyLogoUrl} />
           </div>
-          <p className="mb-2 text-sm font-black uppercase tracking-[0.32em] text-[#E53935]">
-            PRXY Event Leaderboard
-          </p>
           <h1 className="text-5xl font-black uppercase leading-none text-white sm:text-7xl lg:text-8xl">
-            Live Leaderboard
+            Rankings
           </h1>
           <p className="mt-4 max-w-3xl text-lg font-semibold leading-7 text-white/80 sm:text-2xl">
             {currentEvent?.event_name ?? "No Active Event Selected"}
@@ -185,12 +184,6 @@ export default function LeaderboardClient() {
                 "Select an event in admin"}
             </span>
           </p>
-          <Link
-            className="mt-5 inline-flex min-h-10 items-center border border-white/20 px-3 text-xs font-black uppercase tracking-[0.14em] text-white/65 transition hover:border-[#E53935] hover:text-white"
-            href="/archive"
-          >
-            Event Archive
-          </Link>
         </header>
 
         <div className="grid grid-cols-[70px_1fr_104px_92px] border-b border-[#E53935] pb-3 text-xs font-black uppercase tracking-[0.14em] text-white/55 sm:grid-cols-[90px_1fr_140px_130px]">
@@ -211,7 +204,7 @@ export default function LeaderboardClient() {
             </div>
           ) : !currentEvent ? (
             <div className="py-16 text-center text-lg font-bold text-white/55">
-              No active event selected.
+              Event not found.
             </div>
           ) : rankedEntries.length === 0 ? (
             <div className="py-16 text-center text-lg font-bold text-white/55">
@@ -239,12 +232,19 @@ export default function LeaderboardClient() {
                 </div>
                 <div className="pl-3">
                   {entry.thumbnail_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      alt={`${entry.golfer_name} shot thumbnail`}
-                      className="aspect-[4/3] w-full object-cover"
-                      src={entry.thumbnail_url}
-                    />
+                    <button
+                      aria-label={`Open ${entry.golfer_name} photo`}
+                      className="block w-full border border-transparent transition hover:border-[#E53935] focus:border-[#E53935] focus:outline-none"
+                      onClick={() => setSelectedPhoto(entry)}
+                      type="button"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        alt={`${entry.golfer_name} shot thumbnail`}
+                        className="aspect-[4/3] w-full object-cover"
+                        src={entry.thumbnail_url}
+                      />
+                    </button>
                   ) : (
                     <PlaceholderImage />
                   )}
@@ -254,6 +254,42 @@ export default function LeaderboardClient() {
           )}
         </div>
       </section>
+
+      {selectedPhoto?.thumbnail_url ? (
+        <div
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 px-4 py-6"
+          role="dialog"
+        >
+          <div className="w-full max-w-5xl">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-2xl font-black uppercase text-white">
+                  {selectedPhoto.golfer_name}
+                </h3>
+                <p className="text-sm font-semibold uppercase tracking-[0.08em] text-white/50">
+                  {selectedPhoto.company_name || "Independent Team"} |{" "}
+                  {formatDistance(selectedPhoto.distance)}
+                </p>
+              </div>
+              <button
+                aria-label="Close photo"
+                className="grid h-12 w-12 place-items-center border border-white/20 text-white transition hover:border-[#E53935] hover:text-[#E53935]"
+                onClick={() => setSelectedPhoto(null)}
+                type="button"
+              >
+                <X aria-hidden="true" className="h-6 w-6" />
+              </button>
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              alt={`${selectedPhoto.golfer_name} full size result`}
+              className="max-h-[82vh] w-full object-contain"
+              src={selectedPhoto.thumbnail_url}
+            />
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
