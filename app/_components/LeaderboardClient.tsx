@@ -186,7 +186,7 @@ export default function LeaderboardClient({ slug }: { slug: string }) {
           </p>
         </header>
 
-        <div className="grid grid-cols-[30px_1fr_56px] gap-x-1 border-b border-[#E53935] pb-2 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/55 sm:grid-cols-[44px_1fr_92px_68px] sm:text-xs">
+        <div className="grid grid-cols-[30px_1fr_56px] gap-x-2 border-b border-[#E53935] pb-2 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/55 sm:grid-cols-[44px_1fr_92px_68px] sm:text-xs">
           <span>Rank</span>
           <span>Golfer / Team</span>
           <span className="text-right">Distance</span>
@@ -213,17 +213,17 @@ export default function LeaderboardClient({ slug }: { slug: string }) {
           ) : (
             rankedEntries.map((entry, index) => (
               <article
-                className="grid grid-cols-[30px_1fr_56px] items-center gap-x-1 border-b border-white/10 py-2.5 sm:grid-cols-[44px_1fr_92px_68px] sm:py-3"
+                className="grid grid-cols-[30px_1fr_56px] items-center gap-x-2 border-b border-white/10 py-2.5 sm:grid-cols-[44px_1fr_92px_68px] sm:py-3"
                 key={entry.id}
               >
                 <div className="text-xl font-black text-[#E53935] sm:text-2xl">
                   {index + 1}
                 </div>
                 <div className="min-w-0 pr-3">
-                  <h2 className="break-words text-base font-black uppercase leading-tight text-white sm:truncate sm:text-xl">
+                  <h2 className="truncate text-base font-black uppercase leading-tight text-white sm:text-xl">
                     {entry.golfer_name}
                   </h2>
-                  <p className="mt-0.5 break-words text-xs font-semibold uppercase tracking-[0.07em] text-white/50 sm:truncate sm:text-sm">
+                  <p className="mt-0.5 truncate text-xs font-semibold uppercase tracking-[0.07em] text-white/50 sm:text-sm">
                     {entry.company_name || "Independent Team"}
                   </p>
                 </div>
