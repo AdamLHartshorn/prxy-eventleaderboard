@@ -1,0 +1,19 @@
+{
+  "name": "PRXY Event Leaderboard",
+  "short_name": "PRXY Leaderboard",
+  "description": "Live event leaderboard for the Indiana Sports Corp Charity Golf Tournament.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
