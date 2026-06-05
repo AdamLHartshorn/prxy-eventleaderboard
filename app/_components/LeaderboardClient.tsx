@@ -44,7 +44,7 @@ function CompanyLogo({ logoUrl }: { logoUrl: string | null }) {
       // eslint-disable-next-line @next/next/no-img-element
       <img
         alt="Company logo"
-        className="max-h-20 max-w-48 object-contain"
+        className="max-h-24 max-w-56 object-contain"
         src={logoUrl}
       />
     );
@@ -173,7 +173,7 @@ export default function LeaderboardClient({ slug }: { slug: string }) {
           <div className="mb-5 flex items-center justify-between gap-3">
             <CompanyLogo logoUrl={companyLogoUrl} />
           </div>
-          <h1 className="text-5xl font-black uppercase leading-none text-white sm:text-7xl lg:text-8xl">
+          <h1 className="text-4xl font-black uppercase leading-none text-white sm:text-6xl lg:text-7xl">
             Rankings
           </h1>
           <p className="mt-4 max-w-3xl text-lg font-semibold leading-7 text-white/80 sm:text-2xl">
