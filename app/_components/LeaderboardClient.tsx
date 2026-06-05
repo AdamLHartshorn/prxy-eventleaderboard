@@ -32,8 +32,8 @@ function formatDistance(distance: number | null) {
 
 function PlaceholderImage() {
   return (
-    <div className="flex aspect-[4/3] min-h-10 items-center justify-center border border-white/15 bg-[linear-gradient(135deg,#171717,#050505)] text-white/45">
-      <ImageIcon aria-hidden="true" className="h-5 w-5" />
+    <div className="flex aspect-[4/3] min-h-8 items-center justify-center border border-white/15 bg-[linear-gradient(135deg,#171717,#050505)] text-white/45">
+      <ImageIcon aria-hidden="true" className="h-4 w-4" />
     </div>
   );
 }
@@ -186,11 +186,11 @@ export default function LeaderboardClient({ slug }: { slug: string }) {
           </p>
         </header>
 
-        <div className="grid grid-cols-[30px_1fr_56px] gap-x-2 border-b border-[#E53935] pb-2 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/55 sm:grid-cols-[44px_1fr_92px_68px] sm:text-xs">
+        <div className="grid grid-cols-[30px_minmax(0,1fr)_52px_34px] gap-x-2 border-b border-[#E53935] pb-2 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/55 sm:grid-cols-[44px_1fr_92px_52px] sm:text-xs">
           <span>Rank</span>
           <span>Golfer / Team</span>
           <span className="text-right">Distance</span>
-          <span className="hidden text-right sm:block">Image</span>
+          <span className="text-right">Image</span>
         </div>
 
         <div className="flex-1">
@@ -213,13 +213,13 @@ export default function LeaderboardClient({ slug }: { slug: string }) {
           ) : (
             rankedEntries.map((entry, index) => (
               <article
-                className="grid grid-cols-[30px_1fr_56px] items-center gap-x-2 border-b border-white/10 py-2.5 sm:grid-cols-[44px_1fr_92px_68px] sm:py-3"
+                className="grid grid-cols-[30px_minmax(0,1fr)_52px_34px] items-center gap-x-2 border-b border-white/10 py-2.5 sm:grid-cols-[44px_1fr_92px_52px] sm:py-3"
                 key={entry.id}
               >
                 <div className="text-xl font-black text-[#E53935] sm:text-2xl">
                   {index + 1}
                 </div>
-                <div className="min-w-0 pr-3">
+                <div className="min-w-0 pr-1 sm:pr-3">
                   <h2 className="truncate text-base font-black uppercase leading-tight text-white sm:text-xl">
                     {entry.golfer_name}
                   </h2>
@@ -230,7 +230,7 @@ export default function LeaderboardClient({ slug }: { slug: string }) {
                 <div className="text-right text-sm font-black text-white sm:text-xl">
                   {formatDistance(entry.distance)}
                 </div>
-                <div className="col-span-2 col-start-2 mt-2 max-w-24 pl-0 sm:col-auto sm:col-start-auto sm:mt-0 sm:max-w-none sm:pl-2">
+                <div className="pl-0 sm:pl-2">
                   {entry.thumbnail_url ? (
                     <button
                       aria-label={`Open ${entry.golfer_name} photo`}
