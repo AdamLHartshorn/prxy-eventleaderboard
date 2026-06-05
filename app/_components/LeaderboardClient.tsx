@@ -32,8 +32,8 @@ function formatDistance(distance: number | null) {
 
 function PlaceholderImage() {
   return (
-    <div className="flex aspect-[4/3] min-h-20 items-center justify-center border border-white/15 bg-[linear-gradient(135deg,#171717,#050505)] text-white/45">
-      <ImageIcon aria-hidden="true" className="h-8 w-8" />
+    <div className="flex aspect-[4/3] min-h-10 items-center justify-center border border-white/15 bg-[linear-gradient(135deg,#171717,#050505)] text-white/45">
+      <ImageIcon aria-hidden="true" className="h-5 w-5" />
     </div>
   );
 }
@@ -186,11 +186,11 @@ export default function LeaderboardClient({ slug }: { slug: string }) {
           </p>
         </header>
 
-        <div className="grid grid-cols-[70px_1fr_104px_92px] border-b border-[#E53935] pb-3 text-xs font-black uppercase tracking-[0.14em] text-white/55 sm:grid-cols-[90px_1fr_140px_130px]">
+        <div className="grid grid-cols-[30px_1fr_56px] gap-x-1 border-b border-[#E53935] pb-2 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/55 sm:grid-cols-[44px_1fr_92px_68px] sm:text-xs">
           <span>Rank</span>
           <span>Golfer / Team</span>
           <span className="text-right">Distance</span>
-          <span className="text-right">Image</span>
+          <span className="hidden text-right sm:block">Image</span>
         </div>
 
         <div className="flex-1">
@@ -213,24 +213,24 @@ export default function LeaderboardClient({ slug }: { slug: string }) {
           ) : (
             rankedEntries.map((entry, index) => (
               <article
-                className="grid grid-cols-[70px_1fr_104px_92px] items-center gap-0 border-b border-white/10 py-4 sm:grid-cols-[90px_1fr_140px_130px] sm:py-5"
+                className="grid grid-cols-[30px_1fr_56px] items-center gap-x-1 border-b border-white/10 py-2.5 sm:grid-cols-[44px_1fr_92px_68px] sm:py-3"
                 key={entry.id}
               >
-                <div className="text-4xl font-black text-[#E53935] sm:text-5xl">
+                <div className="text-xl font-black text-[#E53935] sm:text-2xl">
                   {index + 1}
                 </div>
                 <div className="min-w-0 pr-3">
-                  <h2 className="truncate text-xl font-black uppercase leading-tight text-white sm:text-3xl">
+                  <h2 className="break-words text-base font-black uppercase leading-tight text-white sm:truncate sm:text-xl">
                     {entry.golfer_name}
                   </h2>
-                  <p className="mt-1 truncate text-sm font-semibold uppercase tracking-[0.08em] text-white/50 sm:text-base">
+                  <p className="mt-0.5 break-words text-xs font-semibold uppercase tracking-[0.07em] text-white/50 sm:truncate sm:text-sm">
                     {entry.company_name || "Independent Team"}
                   </p>
                 </div>
-                <div className="text-right text-2xl font-black text-white sm:text-4xl">
+                <div className="text-right text-sm font-black text-white sm:text-xl">
                   {formatDistance(entry.distance)}
                 </div>
-                <div className="pl-3">
+                <div className="col-span-2 col-start-2 mt-2 max-w-24 pl-0 sm:col-auto sm:col-start-auto sm:mt-0 sm:max-w-none sm:pl-2">
                   {entry.thumbnail_url ? (
                     <button
                       aria-label={`Open ${entry.golfer_name} photo`}
