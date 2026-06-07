@@ -86,7 +86,7 @@ function LeaderboardQrCode({ qrCodeUrl }: { qrCodeUrl: string | null }) {
         // eslint-disable-next-line @next/next/no-img-element
         <img
           alt="Leaderboard QR code"
-          className="h-14 w-14 border border-white/20 bg-white p-1 object-contain sm:h-20 sm:w-20 lg:h-24 lg:w-24"
+          className="h-14 w-14 border border-white/20 object-cover sm:h-20 sm:w-20 lg:h-24 lg:w-24"
           src={qrCodeUrl}
         />
       ) : (
@@ -215,7 +215,12 @@ export default function LeaderboardClient({ slug }: { slug: string }) {
       )
       .subscribe();
 
+    const refreshInterval = window.setInterval(() => {
+      void loadBoard();
+    }, 15000);
+
     return () => {
+      window.clearInterval(refreshInterval);
       void client.removeChannel(channel);
     };
   }, [loadBoard]);
@@ -225,7 +230,7 @@ export default function LeaderboardClient({ slug }: { slug: string }) {
   return (
     <main className="min-h-screen bg-black text-white">
       <section className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-6 sm:px-8 lg:px-10">
-        <header className="mb-6 border-b border-white/15 pb-5">
+        <header className="mb-5">
           <div className="mb-5 flex items-center justify-between gap-4">
             <CompanyLogo logoUrl={companyLogoUrl} />
           </div>
@@ -261,13 +266,6 @@ export default function LeaderboardClient({ slug }: { slug: string }) {
             </p>
           </div>
         </header>
-
-        <div className="grid grid-cols-[30px_minmax(0,1fr)_52px_34px] gap-x-2 border-b border-[#E53935] pb-2 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/55 sm:grid-cols-[44px_1fr_92px_52px] sm:text-xs">
-          <span>Rank</span>
-          <span>Golfer / Team</span>
-          <span className="text-right">Distance</span>
-          <span className="text-right">Image</span>
-        </div>
 
         <div className="flex-1">
           {loading ? (

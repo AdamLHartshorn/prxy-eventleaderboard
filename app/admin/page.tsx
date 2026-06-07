@@ -1166,7 +1166,7 @@ export default function AdminPage() {
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-xs font-black uppercase tracking-[0.12em] text-[#42BD33]/80">
-                    Donations Earned
+                    Funds Raised
                   </span>
                   <input
                     className="h-13 w-full border border-[#42BD33]/40 bg-black px-3 font-bold text-[#D8FFD3] outline-none focus:border-[#42BD33]"
@@ -1214,7 +1214,7 @@ export default function AdminPage() {
                   ) : (
                     <Save aria-hidden="true" className="h-4 w-4" />
                   )}
-                  Save Event
+                  Save Event Updates
                 </button>
               </div>
             </div>
