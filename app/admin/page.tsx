@@ -99,7 +99,7 @@ function formatDistanceValue(distance: string) {
 
   const parsed = Number(distance);
 
-  return Number.isFinite(parsed) ? `${parsed.toFixed(1)} FT` : "Invalid distance";
+  return Number.isFinite(parsed) ? `${parsed.toFixed(2)} FT` : "Invalid distance";
 }
 
 function entryToDraft(entry: LeaderboardEntry): DraftEntry {

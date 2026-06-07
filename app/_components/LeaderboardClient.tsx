@@ -28,7 +28,7 @@ function formatDistance(distance: number | null) {
   if (distance == null) return "--";
   if (Number(distance) === 0) return "HIO";
 
-  return `${Number(distance).toFixed(1)} FT`;
+  return `${Number(distance).toFixed(2)} FT`;
 }
 
 function formatDonationAmount(amount: number | null) {
