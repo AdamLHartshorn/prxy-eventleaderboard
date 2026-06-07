@@ -99,6 +99,8 @@ function LeaderboardQrCode({ qrCodeUrl }: { qrCodeUrl: string | null }) {
 }
 
 function DonationBadge({ amount }: { amount: number | null }) {
+  if (amount == null || Number(amount) < 100) return null;
+
   return (
     <div className="donation-badge border border-[#42BD33]/70 bg-[#42BD33]/10 px-3 py-2 text-right sm:px-4">
       <p className="text-[0.55rem] font-black uppercase leading-none tracking-[0.16em] text-[#D8FFD3]/75 sm:text-[0.65rem]">
