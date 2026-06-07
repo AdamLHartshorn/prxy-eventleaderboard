@@ -255,7 +255,7 @@ export default function LeaderboardClient({ slug }: { slug: string }) {
           <div className="mt-4 max-w-3xl border border-white/15 bg-white/[0.03] p-4 shadow-[inset_4px_0_0_#E53935] sm:p-5">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-lg font-black uppercase leading-tight tracking-[0.08em] text-white sm:text-2xl">
+                <p className="text-base font-black uppercase leading-tight tracking-[0.08em] text-white sm:text-lg">
                   {currentEvent?.event_name ?? "No Active Event Selected"}
                 </p>
                 {currentEvent?.event_subtitle ? (
