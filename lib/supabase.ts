@@ -21,6 +21,7 @@ export type LeaderboardEvent = {
   event_subtitle: string | null;
   venue_name: string | null;
   logo_url: string | null;
+  donation_amount: number | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -29,6 +30,7 @@ export type AppSettings = {
   id: number;
   current_event_id: string | null;
   company_logo_url: string | null;
+  qr_code_url: string | null;
   updated_at: string | null;
 };
 

@@ -30,6 +30,16 @@ function formatDistance(distance: number | null) {
   return `${Number(distance).toFixed(1)} FT`;
 }
 
+function formatDonationAmount(amount: number | null) {
+  const value = amount == null ? 0 : Number(amount);
+
+  return new Intl.NumberFormat("en-US", {
+    currency: "USD",
+    maximumFractionDigits: 0,
+    style: "currency",
+  }).format(value);
+}
+
 function PlaceholderImage() {
   return (
     <div className="flex aspect-[4/3] min-h-8 items-center justify-center border border-white/15 bg-[linear-gradient(135deg,#171717,#050505)] text-white/45">
@@ -57,6 +67,50 @@ function CompanyLogo({ logoUrl }: { logoUrl: string | null }) {
   );
 }
 
+function LiveBadge() {
+  return (
+    <div className="live-badge inline-flex items-center gap-2 border border-[#E53935]/70 bg-[#E53935]/12 px-3 py-1.5 text-xs font-black uppercase tracking-[0.22em] text-white">
+      <span className="relative flex h-2.5 w-2.5">
+        <span className="absolute inline-flex h-full w-full animate-ping bg-[#E53935] opacity-60" />
+        <span className="relative inline-flex h-2.5 w-2.5 bg-[#E53935]" />
+      </span>
+      Live
+    </div>
+  );
+}
+
+function LeaderboardQrCode({ qrCodeUrl }: { qrCodeUrl: string | null }) {
+  return (
+    <div className="shrink-0">
+      {qrCodeUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          alt="Leaderboard QR code"
+          className="h-14 w-14 border border-white/20 bg-white p-1 object-contain sm:h-20 sm:w-20 lg:h-24 lg:w-24"
+          src={qrCodeUrl}
+        />
+      ) : (
+        <div className="grid h-14 w-14 place-items-center border border-white/15 bg-white/[0.03] p-1.5 text-center text-[0.48rem] font-black uppercase leading-tight tracking-[0.08em] text-white/35 sm:h-20 sm:w-20 sm:p-2 sm:text-[0.55rem] lg:h-24 lg:w-24">
+          QR Code
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DonationBadge({ amount }: { amount: number | null }) {
+  return (
+    <div className="donation-badge border border-[#42BD33]/70 bg-[#42BD33]/10 px-3 py-2 text-right sm:px-4">
+      <p className="text-[0.55rem] font-black uppercase leading-none tracking-[0.16em] text-[#D8FFD3]/75 sm:text-[0.65rem]">
+        Funds Raised
+      </p>
+      <p className="mt-1 text-xl font-black leading-none text-[#42BD33] sm:text-3xl">
+        {formatDonationAmount(amount)}
+      </p>
+    </div>
+  );
+}
+
 export default function LeaderboardClient({ slug }: { slug: string }) {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [currentEvent, setCurrentEvent] = useState<LeaderboardEvent | null>(
@@ -66,6 +120,7 @@ export default function LeaderboardClient({ slug }: { slug: string }) {
     null,
   );
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(null);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -95,6 +150,7 @@ export default function LeaderboardClient({ slug }: { slug: string }) {
       const settings = settingsRow as AppSettings | null;
       const event = eventRow as LeaderboardEvent | null;
       setCompanyLogoUrl(settings?.company_logo_url ?? null);
+      setQrCodeUrl(settings?.qr_code_url ?? null);
 
       if (!event) {
         setCurrentEvent(null);
@@ -170,23 +226,40 @@ export default function LeaderboardClient({ slug }: { slug: string }) {
     <main className="min-h-screen bg-black text-white">
       <section className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-6 sm:px-8 lg:px-10">
         <header className="mb-6 border-b border-white/15 pb-5">
-          <div className="mb-5 flex items-center justify-between gap-3">
+          <div className="mb-5 flex items-center justify-between gap-4">
             <CompanyLogo logoUrl={companyLogoUrl} />
           </div>
-          <h1 className="text-4xl font-black uppercase leading-none text-white sm:text-6xl lg:text-7xl">
-            Rankings
-          </h1>
-          <p className="mt-4 max-w-3xl text-lg font-semibold leading-7 text-white/80 sm:text-2xl">
-            {currentEvent?.event_name ?? "No Active Event Selected"}
-            {currentEvent?.event_subtitle ? (
-              <span className="block text-base text-white/70 sm:text-xl">
-                {currentEvent.event_subtitle}
-              </span>
-            ) : null}
-            <span className="block text-white/60">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-4xl font-black uppercase leading-none text-white sm:text-6xl lg:text-7xl">
+                  Rankings
+                </h1>
+                <LiveBadge />
+              </div>
+            </div>
+            <LeaderboardQrCode qrCodeUrl={qrCodeUrl} />
+          </div>
+          <div className="mt-4 max-w-3xl border border-white/15 bg-white/[0.03] p-4 shadow-[inset_4px_0_0_#E53935] sm:p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-lg font-black uppercase leading-tight tracking-[0.08em] text-white sm:text-2xl">
+                  {currentEvent?.event_name ?? "No Active Event Selected"}
+                </p>
+                {currentEvent?.event_subtitle ? (
+                  <p className="mt-1 text-sm font-bold uppercase tracking-[0.14em] text-white/62 sm:text-base">
+                    {currentEvent.event_subtitle}
+                  </p>
+                ) : null}
+              </div>
+              {currentEvent ? (
+                <DonationBadge amount={currentEvent.donation_amount} />
+              ) : null}
+            </div>
+            <p className="mt-3 flex min-h-7 items-center border-t border-white/10 pt-3 text-xs font-black uppercase leading-none tracking-[0.18em] text-[#E53935] sm:text-sm">
               {currentEvent?.venue_name || "Select an event in admin"}
-            </span>
-          </p>
+            </p>
+          </div>
         </header>
 
         <div className="grid grid-cols-[30px_minmax(0,1fr)_52px_34px] gap-x-2 border-b border-[#E53935] pb-2 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/55 sm:grid-cols-[44px_1fr_92px_52px] sm:text-xs">

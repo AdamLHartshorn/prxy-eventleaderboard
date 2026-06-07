@@ -34,6 +34,7 @@ type EventDraft = {
   slug: string;
   event_subtitle: string;
   venue_name: string;
+  donation_amount: string;
 };
 
 const emptyDraft: DraftEntry = {
@@ -49,6 +50,7 @@ const emptyEventDraft: EventDraft = {
   slug: "",
   event_subtitle: "Indiana Sports Corp Charity Golf Tournament",
   venue_name: "The Sagamore Club of Noblesville",
+  donation_amount: "0",
 };
 
 function slugify(value: string) {
@@ -99,6 +101,10 @@ function eventDraftToPayload(draft: EventDraft) {
     slug: draft.slug.trim() || slugify(draft.event_name),
     event_subtitle: draft.event_subtitle.trim() || null,
     venue_name: draft.venue_name.trim() || null,
+    donation_amount:
+      draft.donation_amount.trim() === ""
+        ? 0
+        : Number(draft.donation_amount),
     updated_at: new Date().toISOString(),
   };
 }
@@ -130,6 +136,7 @@ export default function AdminPage() {
   const [currentEventId, setCurrentEventId] = useState<string | null>(null);
   const [eventDraft, setEventDraft] = useState<EventDraft>(emptyEventDraft);
   const [companyLogoUrl, setCompanyLogoUrl] = useState("");
+  const [qrCodeUrl, setQrCodeUrl] = useState("");
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [drafts, setDrafts] = useState<Record<string, DraftEntry>>({});
   const [newEntry, setNewEntry] = useState<DraftEntry>(emptyDraft);
@@ -138,7 +145,9 @@ export default function AdminPage() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [savingEvent, setSavingEvent] = useState(false);
   const [savingCompanyLogo, setSavingCompanyLogo] = useState(false);
+  const [savingQrCode, setSavingQrCode] = useState(false);
   const [uploadingCompanyLogo, setUploadingCompanyLogo] = useState(false);
+  const [uploadingQrCode, setUploadingQrCode] = useState(false);
   const [uploadingPhotoId, setUploadingPhotoId] = useState<string | null>(null);
   const [archiving, setArchiving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -257,6 +266,52 @@ export default function AdminPage() {
     setMessage("Company logo uploaded.");
   }
 
+  async function uploadQrCode(file: File | null) {
+    if (!file) return;
+
+    if (!supabase) {
+      setError(supabaseConfigError);
+      return;
+    }
+
+    const client = supabase;
+    setUploadingQrCode(true);
+    setError(null);
+    setMessage(null);
+
+    const extension = file.name.split(".").pop() || "png";
+    const path = `qr-codes/${crypto.randomUUID()}.${extension}`;
+    const { data: uploadResponse, error: uploadNetworkError } =
+      await runSupabaseAction(() =>
+        client.storage.from("shot-videos").upload(path, file, {
+          cacheControl: "3600",
+          contentType: file.type || undefined,
+          upsert: false,
+        }),
+      );
+
+    const uploadError = uploadNetworkError ?? uploadResponse?.error?.message;
+
+    if (uploadError) {
+      setUploadingQrCode(false);
+      setError(uploadError);
+      return;
+    }
+
+    const { data } = client.storage.from("shot-videos").getPublicUrl(path);
+    setQrCodeUrl(data.publicUrl);
+
+    const { error: saveError } = await saveQrCode(data.publicUrl);
+    setUploadingQrCode(false);
+
+    if (saveError) {
+      setError(saveError);
+      return;
+    }
+
+    setMessage("QR code uploaded.");
+  }
+
   async function saveCompanyLogo(nextLogoUrl = companyLogoUrl) {
     if (!supabase) {
       return {
@@ -289,6 +344,45 @@ export default function AdminPage() {
     }
 
     setMessage("Company logo saved.");
+    await loadAdminState();
+
+    return {
+      error: null,
+    };
+  }
+
+  async function saveQrCode(nextQrCodeUrl = qrCodeUrl) {
+    if (!supabase) {
+      return {
+        error: supabaseConfigError,
+      };
+    }
+
+    setSavingQrCode(true);
+    setError(null);
+    setMessage(null);
+
+    const client = supabase;
+    const { error: saveError } = await runSupabaseAction(() =>
+      client
+        .from("app_settings")
+        .upsert({
+          id: 1,
+          qr_code_url: nextQrCodeUrl.trim() || null,
+          updated_at: new Date().toISOString(),
+        })
+        .throwOnError(),
+    );
+
+    setSavingQrCode(false);
+
+    if (saveError) {
+      return {
+        error: saveError,
+      };
+    }
+
+    setMessage("QR code saved.");
     await loadAdminState();
 
     return {
@@ -340,6 +434,7 @@ export default function AdminPage() {
 
     const settings = settingsResponse?.data as AppSettings | null;
     setCompanyLogoUrl(settings?.company_logo_url ?? "");
+    setQrCodeUrl(settings?.qr_code_url ?? "");
     const selectedId = settings?.current_event_id ?? null;
     setCurrentEventId(selectedId);
 
@@ -556,6 +651,7 @@ export default function AdminPage() {
           slug: normalizedSlug,
           event_subtitle: currentEvent.event_subtitle,
           venue_name: currentEvent.venue_name,
+          donation_amount: currentEvent.donation_amount ?? 0,
           updated_at: new Date().toISOString(),
         })
         .eq("id", currentEvent.id)
@@ -934,6 +1030,68 @@ export default function AdminPage() {
 
         <section className="mb-5 border border-white/15 bg-[#080808] p-4">
           <div className="mb-3 text-sm font-black uppercase tracking-[0.14em] text-white/60">
+            Public Leaderboard QR Code
+          </div>
+          <p className="mb-3 text-sm font-semibold leading-6 text-white/50">
+            Upload the QR image that should appear in the top-right of the
+            public rankings page.
+          </p>
+          <div className="mb-3 flex min-h-32 items-center justify-center border border-white/15 bg-black p-4">
+            {qrCodeUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                alt="QR code preview"
+                className="max-h-28 max-w-full object-contain"
+                src={qrCodeUrl}
+              />
+            ) : (
+              <span className="text-sm font-black uppercase tracking-[0.14em] text-white/35">
+                No QR code uploaded
+              </span>
+            )}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+            <input
+              className="h-13 border border-white/20 bg-black px-3 font-bold text-white outline-none focus:border-[#E53935]"
+              onChange={(event) => setQrCodeUrl(event.target.value)}
+              placeholder="QR code image URL"
+              value={qrCodeUrl}
+            />
+            <label className="flex h-13 cursor-pointer items-center justify-center gap-2 border border-white/20 bg-black px-4 font-black uppercase text-white/80">
+              {uploadingQrCode ? (
+                <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload aria-hidden="true" className="h-4 w-4" />
+              )}
+              Upload QR
+              <input
+                accept="image/*"
+                className="sr-only"
+                disabled={uploadingQrCode}
+                onChange={(event) =>
+                  void uploadQrCode(event.target.files?.[0] ?? null)
+                }
+                type="file"
+              />
+            </label>
+            <button
+              className="flex h-13 items-center justify-center gap-2 bg-[#E53935] px-5 font-black uppercase text-white disabled:opacity-50"
+              disabled={savingQrCode || uploadingQrCode}
+              onClick={() => void saveQrCode()}
+              type="button"
+            >
+              {savingQrCode ? (
+                <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save aria-hidden="true" className="h-4 w-4" />
+              )}
+              Save QR
+            </button>
+          </div>
+        </section>
+
+        <section className="mb-5 border border-white/15 bg-[#080808] p-4">
+          <div className="mb-3 text-sm font-black uppercase tracking-[0.14em] text-white/60">
             Active Event
           </div>
           <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
@@ -1006,6 +1164,30 @@ export default function AdminPage() {
                     value={currentEvent.slug ?? ""}
                   />
                 </label>
+                <label className="block">
+                  <span className="mb-1 block text-xs font-black uppercase tracking-[0.12em] text-[#42BD33]/80">
+                    Donations Earned
+                  </span>
+                  <input
+                    className="h-13 w-full border border-[#42BD33]/40 bg-black px-3 font-bold text-[#D8FFD3] outline-none focus:border-[#42BD33]"
+                    inputMode="decimal"
+                    min="0"
+                    onChange={(event) =>
+                      patchCurrentEvent({
+                        donation_amount:
+                          event.target.value === ""
+                            ? null
+                            : Number(event.target.value),
+                      })
+                    }
+                    placeholder="0"
+                    step="1"
+                    type="number"
+                    value={currentEvent.donation_amount ?? ""}
+                  />
+                </label>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-[1fr]">
                 <label className="block">
                   <span className="mb-1 block text-xs font-black uppercase tracking-[0.12em] text-white/45">
                     Public Leaderboard URL
@@ -1093,6 +1275,21 @@ export default function AdminPage() {
               }
               placeholder="Venue"
               value={eventDraft.venue_name}
+            />
+            <input
+              className="h-13 border border-[#42BD33]/40 bg-black px-3 font-bold text-[#D8FFD3] outline-none focus:border-[#42BD33]"
+              inputMode="decimal"
+              min="0"
+              onChange={(event) =>
+                setEventDraft((current) => ({
+                  ...current,
+                  donation_amount: event.target.value,
+                }))
+              }
+              placeholder="Donations earned"
+              step="1"
+              type="number"
+              value={eventDraft.donation_amount}
             />
           </div>
           <button
