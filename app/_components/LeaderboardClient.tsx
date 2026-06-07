@@ -26,6 +26,7 @@ function sortEntries(entries: LeaderboardEntry[]) {
 
 function formatDistance(distance: number | null) {
   if (distance == null) return "--";
+  if (Number(distance) === 0) return "HIO";
 
   return `${Number(distance).toFixed(1)} FT`;
 }

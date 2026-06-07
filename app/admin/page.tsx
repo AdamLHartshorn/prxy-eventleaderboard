@@ -74,11 +74,44 @@ function sortEntries(entries: LeaderboardEntry[]) {
   });
 }
 
+function isHioDistance(distance: string) {
+  return distance.trim().toUpperCase() === "HIO";
+}
+
+function parseDistance(distance: string) {
+  const trimmed = distance.trim();
+
+  if (trimmed === "") return null;
+  if (isHioDistance(trimmed)) return 0;
+
+  return Number(trimmed);
+}
+
+function isValidDistance(distance: string) {
+  const parsed = parseDistance(distance);
+
+  return parsed == null || Number.isFinite(parsed);
+}
+
+function formatDistanceValue(distance: string) {
+  if (!distance.trim()) return "No distance";
+  if (isHioDistance(distance)) return "HIO";
+
+  const parsed = Number(distance);
+
+  return Number.isFinite(parsed) ? `${parsed.toFixed(1)} FT` : "Invalid distance";
+}
+
 function entryToDraft(entry: LeaderboardEntry): DraftEntry {
   return {
     golfer_name: entry.golfer_name,
     company_name: entry.company_name ?? "",
-    distance: entry.distance == null ? "" : String(entry.distance),
+    distance:
+      entry.distance == null
+        ? ""
+        : Number(entry.distance) === 0
+          ? "HIO"
+          : String(entry.distance),
     is_active: entry.is_active,
     thumbnail_url: entry.thumbnail_url ?? "",
   };
@@ -88,7 +121,7 @@ function draftToPayload(draft: DraftEntry) {
   return {
     golfer_name: draft.golfer_name.trim(),
     company_name: draft.company_name.trim() || null,
-    distance: draft.distance.trim() === "" ? null : Number(draft.distance),
+    distance: parseDistance(draft.distance),
     is_active: draft.is_active,
     thumbnail_url: draft.thumbnail_url.trim() || null,
     updated_at: new Date().toISOString(),
@@ -696,6 +729,11 @@ export default function AdminPage() {
       return;
     }
 
+    if (!isValidDistance(newEntry.distance)) {
+      setError('Distance must be a number or "HIO".');
+      return;
+    }
+
     const { error: networkError } = await runSupabaseAction(() =>
       client
         .from("leaderboard_entries")
@@ -731,6 +769,11 @@ export default function AdminPage() {
 
     if (!draft.golfer_name.trim()) {
       setError("Golfer name is required.");
+      return;
+    }
+
+    if (!isValidDistance(draft.distance)) {
+      setError('Distance must be a number or "HIO".');
       return;
     }
 
@@ -1372,7 +1415,7 @@ export default function AdminPage() {
                   distance: event.target.value,
                 }))
               }
-              placeholder="Feet"
+              placeholder="Feet or HIO"
               value={newEntry.distance}
             />
             <button
@@ -1415,9 +1458,7 @@ export default function AdminPage() {
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div>
                       <p className="text-xs font-black uppercase tracking-[0.16em] text-[#E53935]">
-                        {draft.distance
-                          ? `${Number(draft.distance).toFixed(1)} FT`
-                          : "No distance"}
+                        {formatDistanceValue(draft.distance)}
                       </p>
                       <h2 className="text-2xl font-black uppercase">
                         {draft.golfer_name || "Unnamed Player"}
@@ -1499,6 +1540,7 @@ export default function AdminPage() {
                             distance: event.target.value,
                           })
                         }
+                        placeholder="Feet or HIO"
                         value={draft.distance}
                       />
                     </label>
