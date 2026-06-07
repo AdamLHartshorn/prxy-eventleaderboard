@@ -252,8 +252,8 @@ export default function LeaderboardClient({ slug }: { slug: string }) {
             </div>
             <LeaderboardQrCode qrCodeUrl={qrCodeUrl} />
           </div>
-          <div className="mt-4 max-w-3xl border border-white/15 bg-white/[0.03] p-4 shadow-[inset_4px_0_0_#E53935] sm:p-5">
-            <div className="flex items-start justify-between gap-4">
+          <div className="mt-4 max-w-3xl border border-white/15 bg-white/[0.03] shadow-[inset_4px_0_0_#E53935]">
+            <div className="flex items-start justify-between gap-4 px-4 pb-3 pt-4 sm:px-5 sm:pt-5">
               <div className="min-w-0">
                 <p className="text-base font-black uppercase leading-tight tracking-[0.08em] text-white sm:text-lg">
                   {currentEvent?.event_name ?? "No Active Event Selected"}
@@ -268,7 +268,7 @@ export default function LeaderboardClient({ slug }: { slug: string }) {
                 <DonationBadge amount={currentEvent.donation_amount} />
               ) : null}
             </div>
-            <p className="mt-3 flex min-h-7 items-center border-t border-white/10 pt-3 text-xs font-black uppercase leading-none tracking-[0.18em] text-[#E53935] sm:text-sm">
+            <p className="border-t border-white/10 px-4 py-2 text-xs font-black uppercase leading-none tracking-[0.18em] text-[#E53935] sm:px-5 sm:text-sm">
               {currentEvent?.venue_name || "Select an event in admin"}
             </p>
           </div>
