@@ -229,6 +229,10 @@ export default function LeaderboardClient({ slug }: { slug: string }) {
   }, [loadBoard]);
 
   const rankedEntries = useMemo(() => sortEntries(entries), [entries]);
+  const leaderboardSlots = Array.from({ length: 10 }, (_, index) => ({
+    entry: rankedEntries[index] ?? null,
+    rank: index + 1,
+  }));
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -283,32 +287,45 @@ export default function LeaderboardClient({ slug }: { slug: string }) {
             <div className="py-16 text-center text-lg font-bold text-white/55">
               Event not found.
             </div>
-          ) : rankedEntries.length === 0 ? (
-            <div className="py-16 text-center text-lg font-bold text-white/55">
-              No active players yet.
-            </div>
           ) : (
-            rankedEntries.map((entry, index) => (
+            leaderboardSlots.map(({ entry, rank }) => (
               <article
                 className="grid grid-cols-[30px_minmax(0,1fr)_52px_34px] items-center gap-x-2 border-b border-white/10 py-2.5 sm:grid-cols-[44px_1fr_92px_52px] sm:py-3"
-                key={entry.id}
+                key={entry?.id ?? `empty-${rank}`}
               >
                 <div className="text-xl font-black text-[#E53935] sm:text-2xl">
-                  {index + 1}
+                  {rank}
                 </div>
                 <div className="min-w-0 pr-1 sm:pr-3">
-                  <h2 className="truncate text-base font-black uppercase leading-tight text-white sm:text-xl">
-                    {entry.golfer_name}
-                  </h2>
-                  <p className="mt-0.5 truncate text-xs font-semibold uppercase tracking-[0.07em] text-white/50 sm:text-sm">
-                    {entry.company_name || "Independent Team"}
-                  </p>
+                  {entry ? (
+                    <>
+                      <h2 className="truncate text-base font-black uppercase leading-tight text-white sm:text-xl">
+                        {entry.golfer_name}
+                      </h2>
+                      <p className="mt-0.5 truncate text-xs font-semibold uppercase tracking-[0.07em] text-white/50 sm:text-sm">
+                        {entry.company_name || "Independent Team"}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <h2 className="truncate text-base font-black uppercase leading-tight text-white/20 sm:text-xl">
+                        Awaiting Shot
+                      </h2>
+                      <p className="mt-0.5 truncate text-xs font-semibold uppercase tracking-[0.07em] text-white/15 sm:text-sm">
+                        Closest to the pin
+                      </p>
+                    </>
+                  )}
                 </div>
                 <div className="text-right text-sm font-black text-white sm:text-xl">
-                  {formatDistance(entry.distance)}
+                  {entry ? (
+                    formatDistance(entry.distance)
+                  ) : (
+                    <span className="text-white/15">--</span>
+                  )}
                 </div>
                 <div className="pl-0 sm:pl-2">
-                  {entry.thumbnail_url ? (
+                  {entry?.thumbnail_url ? (
                     <button
                       aria-label={`Open ${entry.golfer_name} photo`}
                       className="block w-full border border-transparent transition hover:border-[#E53935] focus:border-[#E53935] focus:outline-none"
@@ -322,14 +339,38 @@ export default function LeaderboardClient({ slug }: { slug: string }) {
                         src={entry.thumbnail_url}
                       />
                     </button>
-                  ) : (
+                  ) : entry ? (
                     <PlaceholderImage />
+                  ) : (
+                    <div className="aspect-[4/3] border border-white/5 bg-white/[0.02]" />
                   )}
                 </div>
               </article>
             ))
           )}
         </div>
+
+        <footer className="mt-5 border border-white/15 bg-white/[0.03] p-4 shadow-[inset_4px_0_0_#E53935]">
+          <p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-white/40">
+            Contact
+          </p>
+          <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-base font-black uppercase leading-tight text-white sm:text-xl">
+                Chris Manus
+              </p>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/50 sm:text-sm">
+                Founder
+              </p>
+            </div>
+            <a
+              className="text-sm font-black text-[#E53935] underline-offset-4 hover:underline sm:text-base"
+              href="mailto:chris@prxy.golf"
+            >
+              chris@prxy.golf
+            </a>
+          </div>
+        </footer>
       </section>
 
       {selectedPhoto?.thumbnail_url ? (
